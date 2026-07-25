@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, CreditCard, RefreshCw } from 'lucide-react';
+import { CreditCard, RefreshCw } from 'lucide-react';
 
 interface HeaderProps {
   title: string;

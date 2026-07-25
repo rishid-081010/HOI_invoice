@@ -14,7 +14,7 @@ import {
   User,
   ShieldCheck
 } from 'lucide-react';
-import type { Invoice, CommunicationChannel } from '../types';
+import type { Invoice } from '../types';
 import { getStageDetails } from '../services/aiGenerator';
 import { ChannelPreview } from './ChannelPreview';
 
