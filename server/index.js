@@ -128,6 +128,15 @@ async function runCycle() {
   let triggersFired = 0;
 
   for (const inv of evaluatedInvoices) {
+    // If invoice is paid, ensure stage in Supabase is updated to 'paid'
+    if ((inv.status || '').toLowerCase() === 'paid') {
+      if ((inv.dbStage || '').toLowerCase() !== 'paid') {
+        console.log(`[Cycle] Invoice ${inv.invoiceId} is paid but stage is "${inv.dbStage}". Syncing stage to "paid"...`);
+        await updateInvoiceStage(inv.id, { stage: 'paid' });
+      }
+      continue;
+    }
+
     if (inv.stage === 0) continue; // Not overdue
 
     let targetStageName = 'No reminder';
@@ -185,7 +194,7 @@ app.post('/api/pay-invoice', async (req, res) => {
 
     if (!targetId) return res.status(400).json({ error: 'Missing invoice id parameter' });
 
-    const result = await updateInvoiceStage(targetId, { status: 'paid', stage: 'No reminder' });
+    const result = await updateInvoiceStage(targetId, { status: 'paid', stage: 'paid' });
     console.log(`[server] Invoice ${targetId} successfully marked as PAID in Supabase. Result:`, result);
     res.json({ success: true, message: 'Invoice successfully paid and updated in Supabase.', data: result });
   } catch (error) {
