@@ -164,6 +164,16 @@ async function runCycle() {
  * POST /api/run-cycle
  * Manually trigger the full cycle from the dashboard.
  */
+app.post('/api/run-cycle', async (req, res) => {
+  try {
+    const result = await runCycle();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[server] Error handling POST /api/run-cycle:', error);
+    res.status(500).json({ error: 'Failed to run cycle', message: error.message });
+  }
+});
+
 /**
  * POST /api/pay-invoice
  * Marks an invoice as paid in Supabase.
