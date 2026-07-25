@@ -210,15 +210,19 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                           </div>
                         </div>
 
-                        {/* Card Footer: Channel & WhatsApp / AI Action Chip */}
+                        {/* Card Footer: Channel & Client Email */}
                         <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px]">
                           <div className="flex items-center gap-1 text-slate-400 font-mono">
                             {getChannelIcon(inv.preferredChannel)}
                             <span className="uppercase">{inv.preferredChannel.replace('_', ' ')}</span>
                           </div>
 
-                          <span className="text-emerald-400 font-semibold hover:underline flex items-center gap-1 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                            {inv.status === 'paid' ? 'Paid ✓' : 'WhatsApp Link'}
+                          <span className="text-slate-300 font-medium truncate max-w-[150px] font-sans" title={inv.clientEmail}>
+                            {inv.status === 'paid' ? (
+                              <span className="text-emerald-400 font-semibold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">Paid ✓</span>
+                            ) : (
+                              inv.clientEmail
+                            )}
                           </span>
                         </div>
                       </div>
