@@ -1,0 +1,141 @@
+{
+  "name": "AI Collections Follow-Up Agent Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "collections-agent",
+        "options": {}
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "collections-agent-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.stage }}",
+              "value2": "4"
+            }
+          ]
+        }
+      },
+      "name": "Check Escalation Stage",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.body.customerEmail }}",
+        "subject": "={{ $json.body.emailSubject }}",
+        "emailType": "html",
+        "message": "={{ $json.body.emailBodyHtml }}"
+      },
+      "name": "Send Gmail Follow-Up",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [720, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1",
+          "name": "Agency Gmail Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "#finance-escalations",
+        "text": "={{ $json.body.slackAlert }}"
+      },
+      "name": "Post Slack Escalation Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [720, 400],
+      "credentials": {
+        "slackApi": {
+          "id": "2",
+          "name": "Agency Slack Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "1gX9k_your_google_sheet_id",
+        "sheetName": "Collections Log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Invoice ID": "={{ $json.body.invoiceId }}",
+            "Client Name": "={{ $json.body.clientName }}",
+            "Amount": "={{ $json.body.amount }}",
+            "Stage": "={{ $json.body.stageName }}",
+            "Dispatch Time": "={{ $now }}"
+          }
+        }
+      },
+      "name": "Update Google Sheet Audit Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [950, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Escalation Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Escalation Stage": {
+      "main": [
+        [
+          {
+            "node": "Post Slack Escalation Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Gmail Follow-Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Gmail Follow-Up": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheet Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Slack Escalation Alert": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheet Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

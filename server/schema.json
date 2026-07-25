@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GoogleSheetsInvoiceSchema",
+  "description": "Schema definition for Collections Agent Google Sheets CRM dataset",
+  "type": "object",
+  "properties": {
+    "Invoice ID": {
+      "type": "string",
+      "description": "Unique identifier for the invoice (e.g. INV-1001)",
+      "pattern": "^INV-\\d+$"
+    },
+    "Client Name": {
+      "type": "string",
+      "description": "Full name of client or organization"
+    },
+    "Client Email": {
+      "type": "string",
+      "format": "email",
+      "description": "Contact email address for invoice reminders"
+    },
+    "Amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Monetary value of the invoice in USD ($)"
+    },
+    "Due Date": {
+      "type": "string",
+      "description": "Due date formatted strictly as DD-MM-YYYY",
+      "pattern": "^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[012])-\\d{4}$"
+    },
+    "Status": {
+      "type": "string",
+      "enum": ["unpaid", "paid", "reminded_friendly", "reminded_firm", "escalated_to_team"],
+      "description": "Current status of the invoice payment"
+    },
+    "Payment Link": {
+      "type": "string",
+      "format": "uri",
+      "description": "Direct payment link or URL for the client"
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Additional notes or service details for the invoice"
+    }
+  },
+  "required": [
+    "Invoice ID",
+    "Client Name",
+    "Client Email",
+    "Amount",
+    "Due Date",
+    "Status"
+  ]
+}
