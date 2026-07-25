@@ -15,7 +15,7 @@ import { PublicPaymentPage } from './components/PublicPaymentPage';
 import type { Invoice, ActivityLog, N8nSettings } from './types';
 import { INITIAL_INVOICES, INITIAL_N8N_SETTINGS } from './data/mockInvoices';
 import { generateAIMessages } from './services/aiGenerator';
-import { fetchInvoices, triggerWebhookApi } from './services/api';
+import { fetchInvoices, triggerWebhookApi, runCycleApi } from './services/api';
 
 export function App() {
   const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
@@ -97,88 +97,26 @@ export function App() {
 
   // Run AI Collections Cycle
   const handleRunAICycle = async () => {
-    const newInvoices = await Promise.all(invoices.map(async (inv) => {
-      if (inv.status === 'paid') return inv;
-
-      let nextStage = inv.currentStage;
-      let newStatus = inv.status;
-
-      // Determine next stage
-      if (inv.daysOverdue >= 30) {
-        nextStage = 4;
-        newStatus = 'escalated_to_team';
-      } else if (inv.daysOverdue >= 15) {
-        nextStage = 3;
-        newStatus = 'reminded_firm';
-      } else if (inv.daysOverdue >= 6) {
-        nextStage = 2;
-        newStatus = 'reminded_firm';
-      } else if (inv.daysOverdue >= 1) {
-        nextStage = 1;
-        newStatus = 'reminded_friendly';
-      }
-
-      const generated = generateAIMessages(inv, n8nSettings.agencyName);
-      let content = generated.stage1Friendly.emailBody;
-      if (nextStage === 2) content = generated.stage2Reminder.emailBody;
-      if (nextStage === 3) content = generated.stage3FirmNotice.emailBody;
-      if (nextStage === 4) content = generated.stage4Escalation.slackAlert;
-
-      const newHistoryEvent = {
-        id: `evt-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        timestamp: new Date().toLocaleString(),
-        stageName: nextStage === 4 ? 'Stage 4: Team Escalation' : `Stage ${nextStage}: Follow-Up`,
-        channel: inv.preferredChannel,
-        sender: 'AI Agent' as const,
-        content,
-        status: 'delivered' as const,
-        webhookTriggered: n8nSettings.autoTriggerWebhook
-      };
-
-      // Trigger Express backend API webhook endpoint
-      triggerWebhookApi(inv.id, inv).catch(err => console.log('Backend API webhook trigger log', err));
-
-      // Optional real Webhook trigger
-      if (n8nSettings.autoTriggerWebhook && n8nSettings.webhookUrl) {
-        try {
-          fetch(n8nSettings.webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              invoiceId: inv.id,
-              clientName: inv.clientName,
-              customerEmail: inv.clientEmail,
-              amount: inv.amount,
-              stage: nextStage,
-              daysOverdue: inv.daysOverdue,
-              emailSubject: generated.stage1Friendly.subject,
-              emailBodyHtml: content,
-              slackAlert: generated.stage4Escalation.slackAlert
-            })
-          }).catch(err => console.log('Webhook optional call', err));
-        } catch (e) {
-          // ignore
-        }
-      }
-
+    // 1. Hit the backend manual trigger
+    const cycleResult = await runCycleApi();
+    
+    if (cycleResult.success) {
       addLog(
-        inv.id,
-        inv.clientName,
-        nextStage === 4 ? 'slack_escalation' : 'ai_generation',
-        `Evaluated AI sequence -> Advanced to Stage ${nextStage} (${inv.daysOverdue}d overdue). Dispatched to ${inv.preferredChannel}.`,
-        nextStage === 4 ? 'rose' : 'cyan'
+        'SYSTEM',
+        'Automated Cycle',
+        'ai_generation',
+        `Evaluated ${cycleResult.evaluated} invoices. Fired ${cycleResult.triggersFired} new webhooks. Database synchronized.`,
+        'cyan'
       );
+    } else {
+      addLog('SYSTEM', 'Automated Cycle', 'slack_escalation', 'Failed to run backend automated cycle.', 'rose');
+    }
 
-      return {
-        ...inv,
-        currentStage: nextStage as any,
-        status: newStatus as any,
-        lastFollowUpDate: new Date().toLocaleDateString(),
-        followUpHistory: [newHistoryEvent, ...inv.followUpHistory]
-      };
-    }));
-
-    setInvoices(newInvoices);
+    // 2. Fetch the newly updated database state
+    const refreshedInvoices = await fetchInvoices();
+    if (refreshedInvoices) {
+      setInvoices(refreshedInvoices);
+    }
   };
 
   // Simulate Payment Recovery

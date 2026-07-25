@@ -3,7 +3,7 @@
  * Targets n8n Webhook URL: https://rishielevyx.app.n8n.cloud/webhook/d98a9038-029a-498b-b7c3-b870568fd127
  */
 
-const N8N_WEBHOOK_URL = 'https://rishielevyx.app.n8n.cloud/webhook/d98a9038-029a-498b-b7c3-b870568fd127';
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'https://rishielevyx.app.n8n.cloud/webhook/d98a9038-029a-498b-b7c3-b870568fd127';
 
 /**
  * Triggers n8n webhook with full tiered payload.
@@ -15,21 +15,20 @@ export async function triggerWebhook(evaluatedInvoice) {
     throw new Error('Invoice object is required for webhook dispatch');
   }
 
+  const uuid = evaluatedInvoice.id || '';
+  const invoiceNum = evaluatedInvoice.invoiceId || '';
+  const personName = evaluatedInvoice.contactPerson || evaluatedInvoice.clientName || 'Client';
+  const amount = evaluatedInvoice.amount || 0;
+  const dueDate = evaluatedInvoice.dueDate || '';
+  const paymentLink = evaluatedInvoice.paymentLink || '';
+  const clientEmail = evaluatedInvoice.clientEmail || '';
+
   const payload = {
-    clientEmail: evaluatedInvoice.clientEmail || '',
-    customerEmail: evaluatedInvoice.clientEmail || '',
-    invoiceAmount: evaluatedInvoice.amount || 0,
-    amount: evaluatedInvoice.amount || 0,
-    overdueStage: evaluatedInvoice.overdueStage || `Stage ${evaluatedInvoice.stage || 0}`,
-    stage: evaluatedInvoice.stage || 0,
-    stageName: evaluatedInvoice.stageName || 'Stage 0 - Not Overdue',
-    reminderText: evaluatedInvoice.reminderText || '',
-    emailSubject: evaluatedInvoice.emailSubject || '',
-    emailBodyHtml: evaluatedInvoice.emailBodyHtml || '',
-    paymentLink: evaluatedInvoice.paymentLink || '',
-    invoiceId: evaluatedInvoice.invoiceId || '',
-    daysOverdue: evaluatedInvoice.daysOverdue || 0,
-    timestamp: new Date().toISOString()
+    id: uuid,
+    invoiceId: invoiceNum,
+    to: clientEmail,
+    subject: "Reminder about your unpaid invoice",
+    body: `Hey ${personName}, your Invoice ID is ${invoiceNum}. You have an unpaid invoice of ${amount} that was due on ${dueDate}. Kindly pay via ${paymentLink}. Thank you`
   };
 
   try {

@@ -141,10 +141,22 @@ export async function triggerWebhookApi(invoiceId: string, invoice?: Invoice) {
   }
 }
 
+export async function runCycleApi() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/run-cycle`, { method: 'POST' });
+    if (!res.ok) throw new Error(`Server status ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to run cycle:', error);
+    return { success: false };
+  }
+}
+
 export default {
   fetchInvoices,
   fetchSummary,
   evaluateInvoicesApi,
   triggerWebhookApi,
+  runCycleApi,
   mapBackendInvoiceToFrontend
 };

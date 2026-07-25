@@ -1,18 +1,12 @@
 /**
  * Express API Server for Collections Agent
- * 
- * Endpoints:
- * - GET /api/invoices
- * - GET /api/summary
- * - POST /api/evaluate
- * - POST /api/trigger-webhook
  */
 
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { fetchInvoices } from './sheetsService.js';
+import { fetchInvoices, updateInvoiceStage } from './supabaseService.js';
 import { evaluateInvoices, evaluateInvoice } from './overdueEngine.js';
 import { triggerWebhook } from './webhookService.js';
 
@@ -24,22 +18,13 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
-
-// Serve compiled static React frontend assets from dist/ folder
 app.use(express.static(path.join(__dirname, '../dist')));
 
-/**
- * Helper to fetch and evaluate current Google Sheets CRM dataset.
- */
 async function getEvaluatedDataset() {
   const rawInvoices = await fetchInvoices();
   return evaluateInvoices(rawInvoices);
 }
 
-/**
- * GET /api/invoices
- * Returns list of synced invoices from Google Sheet with overdue stage details.
- */
 app.get('/api/invoices', async (req, res) => {
   try {
     const invoices = await getEvaluatedDataset();
@@ -50,10 +35,6 @@ app.get('/api/invoices', async (req, res) => {
   }
 });
 
-/**
- * GET /api/summary
- * Returns metrics summary (total invoices, total overdue, stage breakdown).
- */
 app.get('/api/summary', async (req, res) => {
   try {
     const invoices = await getEvaluatedDataset();
@@ -83,10 +64,6 @@ app.get('/api/summary', async (req, res) => {
   }
 });
 
-/**
- * POST /api/evaluate
- * Executes overdue invoice evaluation and returns classified stages.
- */
 app.post('/api/evaluate', async (req, res) => {
   try {
     const invoices = await getEvaluatedDataset();
@@ -118,10 +95,6 @@ app.post('/api/evaluate', async (req, res) => {
   }
 });
 
-/**
- * POST /api/trigger-webhook
- * Body: { invoiceId } -> Triggers n8n webhook for specified invoice.
- */
 app.post('/api/trigger-webhook', async (req, res) => {
   try {
     const { invoiceId, invoice } = req.body || {};
@@ -148,12 +121,75 @@ app.post('/api/trigger-webhook', async (req, res) => {
   }
 });
 
-// Fallback to index.html for SPA frontend routing
+// --- Core Logic: The Automated Supabase Cycle ---
+async function runCycle() {
+  console.log('[Cycle] Checking Supabase for overdue invoices...');
+  const evaluatedInvoices = await getEvaluatedDataset();
+  let triggersFired = 0;
+
+  for (const inv of evaluatedInvoices) {
+    if (inv.stage === 0) continue; // Not overdue
+
+    let targetStageName = 'No reminder';
+    if (inv.stage === 1) targetStageName = 'first reminder';
+    if (inv.stage === 2) targetStageName = 'second reminder';
+    if (inv.stage === 3) targetStageName = 'third reminder';
+
+    // Compare original database string with target
+    if (inv.dbStage.toLowerCase() !== targetStageName.toLowerCase()) {
+      console.log(`[Cycle] Stage mismatch for ${inv.invoiceId}. Current: ${inv.dbStage}, Target: ${targetStageName}. Firing webhook...`);
+      
+      // Fire the webhook to n8n
+      const webhookResult = await triggerWebhook(inv);
+      
+      // Verify n8n returned HTTP 200 success
+      if (webhookResult && webhookResult.success) {
+        console.log(`[Cycle] Confirmed success response from n8n for Invoice #${inv.invoiceId}. Updating Supabase...`);
+        
+        // Write the new stage directly to Supabase using the record's UUID
+        await updateInvoiceStage(inv.id, { stage: targetStageName });
+        
+        console.log(`[Cycle] Successfully updated Invoice #${inv.invoiceId} (UUID: ${inv.id}) to "${targetStageName}" in Supabase.`);
+        triggersFired++;
+      } else {
+        console.warn(`[Cycle] Webhook dispatch failed or returned non-success for ${inv.invoiceId}. Supabase stage unchanged.`);
+      }
+    }
+  }
+  
+  return { evaluated: evaluatedInvoices.length, triggersFired };
+}
+
+/**
+ * POST /api/run-cycle
+ * Manually trigger the full cycle from the dashboard.
+ */
+app.post('/api/run-cycle', async (req, res) => {
+  try {
+    const result = await runCycle();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[server] Error handling POST /api/run-cycle:', error);
+    res.status(500).json({ error: 'Failed to run cycle', message: error.message });
+  }
+});
+
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   }
 });
+
+// --- Automated Background Polling for Supabase ---
+const POLLING_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
+setInterval(async () => {
+  try {
+    await runCycle();
+  } catch (err) {
+    console.error('[Automated Poller] Error:', err);
+  }
+}, POLLING_INTERVAL_MS);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {

@@ -67,27 +67,27 @@ export function categorizeStage(daysOverdue, status = 'unpaid') {
     };
   }
 
-  if (daysOverdue >= 1 && daysOverdue <= 3) {
+  if (daysOverdue >= 1 && daysOverdue <= 2) {
     return {
       stage: 1,
       overdueStage: 'Stage 1',
-      stageName: 'Stage 1 - Friendly Reminder'
+      stageName: 'Stage 1 - First Reminder'
     };
   }
 
-  if (daysOverdue >= 4 && daysOverdue <= 10) {
+  if (daysOverdue >= 3 && daysOverdue <= 9) {
     return {
       stage: 2,
       overdueStage: 'Stage 2',
-      stageName: 'Stage 2 - Formal Reminder'
+      stageName: 'Stage 2 - Second Reminder'
     };
   }
 
-  // daysOverdue >= 11 (or > 10)
+  // daysOverdue >= 10
   return {
     stage: 3,
     overdueStage: 'Stage 3',
-    stageName: 'Stage 3 - Strict Reminder / Final Notice'
+    stageName: 'Stage 3 - Third Reminder'
   };
 }
 
@@ -131,6 +131,7 @@ export function evaluateInvoice(invoice, referenceDate) {
 
   return {
     ...invoice,
+    dbStage: invoice.stage || 'No reminder',
     daysOverdue,
     overdueStage: stageInfo.overdueStage,
     stage: stageInfo.stage,
