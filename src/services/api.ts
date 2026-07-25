@@ -1,7 +1,7 @@
 import type { Invoice, InvoiceStatus, FollowUpStage, RiskTier } from '../types';
 import { INITIAL_INVOICES } from '../data/mockInvoices';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * Maps server-side invoice representation to frontend Invoice interface contract.
@@ -19,9 +19,9 @@ export function mapBackendInvoiceToFrontend(serverInvoice: any): Invoice {
     else if (rawRisk === 'Low Risk' || rawRisk === 'Low' || rawRisk === 'Normal') riskTier = 'Low Risk';
     else riskTier = 'Low Risk';
   } else {
-    if (stage >= 3 || daysOverdue >= 11) riskTier = 'High Risk';
-    else if (stage === 2 || (daysOverdue >= 4 && daysOverdue <= 10)) riskTier = 'Moderate';
-    else if (stage === 1 || (daysOverdue >= 1 && daysOverdue <= 3)) riskTier = 'Low Risk';
+    if (stage >= 3 || daysOverdue >= 10) riskTier = 'High Risk';
+    else if (stage === 2 || (daysOverdue >= 3 && daysOverdue <= 9)) riskTier = 'Moderate';
+    else if (stage === 1 || (daysOverdue >= 1 && daysOverdue <= 2)) riskTier = 'Low Risk';
     else riskTier = 'Low Risk';
   }
 
@@ -30,9 +30,9 @@ export function mapBackendInvoiceToFrontend(serverInvoice: any): Invoice {
     status = 'paid';
   } else if (stage === 1) {
     status = 'reminded_friendly';
-  } else if (stage === 2 || stage === 3) {
+  } else if (stage === 2) {
     status = 'reminded_firm';
-  } else if (stage === 4 || daysOverdue >= 30) {
+  } else if (stage >= 3 || daysOverdue >= 10) {
     status = 'escalated_to_team';
   }
 

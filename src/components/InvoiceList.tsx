@@ -55,14 +55,14 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       title: '2nd Reminder (Firm / Plan)',
       colorText: 'text-amber-400',
       pillBg: 'bg-amber-600/30 text-amber-300 border-amber-500/40',
-      filterFn: (i: Invoice) => (i.currentStage === 2 || i.currentStage === 3) && i.status !== 'paid'
+      filterFn: (i: Invoice) => i.currentStage === 2 && i.status !== 'paid'
     },
     {
       id: 'escalated',
-      title: 'Escalated to Team',
+      title: '3rd Reminder / Escalated',
       colorText: 'text-rose-400',
       pillBg: 'bg-rose-600/30 text-rose-300 border-rose-500/40',
-      filterFn: (i: Invoice) => i.status === 'escalated_to_team' || i.currentStage === 4
+      filterFn: (i: Invoice) => (i.currentStage >= 3 || i.status === 'escalated_to_team') && i.status !== 'paid'
     },
     {
       id: 'paid',

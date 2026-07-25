@@ -17,11 +17,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ invoices, 
     .reduce((sum, i) => sum + i.amount, 0);
 
   const activeReminders = invoices.filter(i => (i.currentStage === 1 || i.currentStage === 2 || i.currentStage === 3) && i.status !== 'paid').length;
-  const escalations = invoices.filter(i => i.status === 'escalated_to_team').length;
+  const escalations = invoices.filter(i => (i.currentStage >= 3 || i.status === 'escalated_to_team') && i.status !== 'paid').length;
 
   const unpaidCount = invoices.filter(i => i.status === 'unpaid' && i.currentStage === 0).length;
   const stage1Count = invoices.filter(i => i.currentStage === 1 && i.status !== 'paid').length;
-  const stage2Count = invoices.filter(i => (i.currentStage === 2 || i.currentStage === 3) && i.status !== 'paid').length;
+  const stage2Count = invoices.filter(i => i.currentStage === 2 && i.status !== 'paid').length;
   const paidCount = invoices.filter(i => i.status === 'paid').length;
 
   // Upcoming follow-ups for the table
