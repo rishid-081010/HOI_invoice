@@ -52,6 +52,7 @@ export interface Invoice {
   lastFollowUpDate?: string;
   paymentMethod?: string;
   discountOffered?: number;
+  paymentLink?: string;
 }
 
 export interface ActivityLog {
