@@ -9,6 +9,9 @@ import { fileURLToPath } from 'url';
 import { fetchInvoices, updateInvoiceStage } from './supabaseService.js';
 import { evaluateInvoices, evaluateInvoice } from './overdueEngine.js';
 import { triggerWebhook } from './webhookService.js';
+import { generateAIMessage, setGeminiApiKey, getGeminiApiKey } from './aiService.js';
+
+let currentProvider = 'gemini';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -122,8 +125,9 @@ app.post('/api/trigger-webhook', async (req, res) => {
 });
 
 // --- Core Logic: The Automated Supabase Cycle ---
-async function runCycle() {
-  console.log('[Cycle] Checking Supabase for overdue invoices...');
+async function runCycle(overrideProvider = null) {
+  const provider = overrideProvider || currentProvider;
+  console.log(`[Cycle] Checking Supabase for overdue invoices (AI Provider: ${provider})...`);
   const evaluatedInvoices = await getEvaluatedDataset();
   let triggersFired = 0;
 
@@ -146,12 +150,15 @@ async function runCycle() {
 
     // Compare original database string with target
     if (inv.dbStage.toLowerCase() !== targetStageName.toLowerCase()) {
-      console.log(`[Cycle] Stage mismatch for ${inv.invoiceId}. Current: ${inv.dbStage}, Target: ${targetStageName}. Firing webhook...`);
+      console.log(`[Cycle] Stage mismatch for ${inv.invoiceId}. Current: ${inv.dbStage}, Target: ${targetStageName}. Generating AI message (${provider})...`);
       
-      // Fire the webhook to n8n
-      const webhookResult = await triggerWebhook(inv);
+      // 1. Generate personalized AI message via Gemini or Ollama
+      const aiMessage = await generateAIMessage(inv, provider);
+
+      // 2. Fire the webhook to n8n with AI-generated payload
+      const webhookResult = await triggerWebhook(inv, aiMessage);
       
-      // Verify n8n returned HTTP 200 success
+      // 3. Verify n8n returned HTTP 200 success
       if (webhookResult && webhookResult.success) {
         console.log(`[Cycle] Confirmed success response from n8n for Invoice #${inv.invoiceId}. Updating Supabase...`);
         
@@ -166,8 +173,32 @@ async function runCycle() {
     }
   }
   
-  return { evaluated: evaluatedInvoices.length, triggersFired };
+  return { evaluated: evaluatedInvoices.length, triggersFired, providerUsed: provider };
 }
+
+/**
+ * GET /api/ai-config
+ */
+app.get('/api/ai-config', (req, res) => {
+  res.json({
+    provider: currentProvider,
+    hasGeminiKey: !!getGeminiApiKey()
+  });
+});
+
+/**
+ * POST /api/ai-config
+ */
+app.post('/api/ai-config', (req, res) => {
+  const { provider, geminiApiKey } = req.body || {};
+  if (provider && ['gemini', 'ollama', 'template'].includes(provider)) {
+    currentProvider = provider;
+  }
+  if (geminiApiKey !== undefined) {
+    setGeminiApiKey(geminiApiKey);
+  }
+  res.json({ success: true, provider: currentProvider, hasGeminiKey: !!getGeminiApiKey() });
+});
 
 /**
  * POST /api/run-cycle
@@ -175,7 +206,8 @@ async function runCycle() {
  */
 app.post('/api/run-cycle', async (req, res) => {
   try {
-    const result = await runCycle();
+    const { provider } = req.body || req.query || {};
+    const result = await runCycle(provider);
     res.json({ success: true, ...result });
   } catch (error) {
     console.error('[server] Error handling POST /api/run-cycle:', error);

@@ -143,9 +143,13 @@ export async function triggerWebhookApi(invoiceId: string, invoice?: Invoice) {
   }
 }
 
-export async function runCycleApi() {
+export async function runCycleApi(provider?: string) {
   try {
-    const res = await fetch(`${API_BASE_URL}/run-cycle`, { method: 'POST' });
+    const res = await fetch(`${API_BASE_URL}/run-cycle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider })
+    });
     if (!res.ok) throw new Error(`Server status ${res.status}`);
     return await res.json();
   } catch (error) {
@@ -165,6 +169,31 @@ export async function payInvoiceApi(id: string, invoiceId?: string) {
     return await res.json();
   } catch (error) {
     console.error('Failed to pay invoice:', error);
+    return { success: false };
+  }
+}
+
+export async function getAiConfigApi() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/ai-config`);
+    if (!res.ok) throw new Error(`Server status ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    return { provider: 'gemini', hasGeminiKey: false };
+  }
+}
+
+export async function saveAiConfigApi(provider: string, geminiApiKey?: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/ai-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, geminiApiKey })
+    });
+    if (!res.ok) throw new Error(`Server status ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to save AI config:', error);
     return { success: false };
   }
 }

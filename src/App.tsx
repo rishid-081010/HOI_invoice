@@ -14,17 +14,18 @@ import { PublicPaymentPage } from './components/PublicPaymentPage';
 
 import type { Invoice, ActivityLog, N8nSettings } from './types';
 import { INITIAL_INVOICES, INITIAL_N8N_SETTINGS } from './data/mockInvoices';
-import { fetchInvoices, triggerWebhookApi, runCycleApi, payInvoiceApi } from './services/api';
+import { fetchInvoices, triggerWebhookApi, runCycleApi, payInvoiceApi, getAiConfigApi, saveAiConfigApi } from './services/api';
 
 export function App() {
   const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
   const [n8nSettings, setN8nSettings] = useState<N8nSettings>(INITIAL_N8N_SETTINGS);
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'ollama' | 'template'>('gemini');
   
   // Navigation state
   const [activeTab, setActiveTab] = useState<MainTab>('home');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
-  // Sync with backend Google Sheets API on mount
+  // Sync with backend on mount
   useEffect(() => {
     async function loadBackendData() {
       try {
@@ -32,12 +33,21 @@ export function App() {
         if (fetched && fetched.length > 0) {
           setInvoices(fetched);
         }
+        const aiCfg = await getAiConfigApi();
+        if (aiCfg && aiCfg.provider) {
+          setAiProvider(aiCfg.provider);
+        }
       } catch (err) {
         console.warn('Backend sync failed on mount:', err);
       }
     }
     loadBackendData();
   }, []);
+
+  const handleChangeAiProvider = async (newProvider: 'gemini' | 'ollama' | 'template') => {
+    setAiProvider(newProvider);
+    await saveAiConfigApi(newProvider);
+  };
 
   // Modal states
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
@@ -100,15 +110,15 @@ export function App() {
   const handleRunAICycle = async () => {
     setIsRunningCycle(true);
     try {
-      // 1. Hit the backend manual trigger
-      const cycleResult = await runCycleApi();
+      // 1. Hit the backend manual trigger with selected AI provider
+      const cycleResult = await runCycleApi(aiProvider);
       
       if (cycleResult && cycleResult.success) {
         addLog(
           'SYSTEM',
           'Automated Cycle',
           'ai_generation',
-          `Evaluated ${cycleResult.evaluated} invoices. Fired ${cycleResult.triggersFired} new webhooks. Database synchronized.`,
+          `Evaluated ${cycleResult.evaluated} invoices using ${cycleResult.providerUsed || aiProvider}. Fired ${cycleResult.triggersFired} new webhooks. Database synchronized.`,
           'cyan'
         );
       } else {
@@ -287,6 +297,8 @@ export function App() {
           title={getHeaderTitle()} 
           onRunAICycle={handleRunAICycle}
           isRunningCycle={isRunningCycle}
+          aiProvider={aiProvider}
+          onChangeAiProvider={handleChangeAiProvider}
           onOpenPaymentPortal={() => {
             setPaymentPortalInvoice(null);
             setIsPaymentPortalOpen(true);
