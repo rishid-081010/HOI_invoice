@@ -34,6 +34,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ invoices, 
     .sort((a, b) => b.daysOverdue - a.daysOverdue)
     .slice(0, 5);
 
+  const totalVolume = totalRecovered + totalOutstanding;
+  const paidPercentage = totalVolume > 0 ? Math.round((totalRecovered / totalVolume) * 100) : 0;
+  const unpaidPercentage = 100 - paidPercentage;
+
   return (
     <div className="space-y-6">
       {/* 4 Metric Cards */}
@@ -94,32 +98,54 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ invoices, 
 
       {/* Bottom Split Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Sources Donut Chart */}
-        <div className="bg-[#1e293b] rounded-xl p-6 border border-slate-700/50 lg:col-span-1">
-          <h3 className="text-lg font-medium text-white mb-6">Revenue Sources</h3>
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="relative w-48 h-48 rounded-full border-[16px] border-[#3b82f6] flex items-center justify-center">
-              {/* Fake inner donut ring */}
-              <div className="absolute inset-0 rounded-full border-[16px] border-[#10b981] clip-half opacity-80" style={{ clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)' }}></div>
-              <div className="absolute inset-0 rounded-full border-[16px] border-[#f59e0b] clip-half opacity-60" style={{ clipPath: 'polygon(0 0, 50% 0, 50% 50%, 0 50%)' }}></div>
+        {/* Payment Breakdown Donut Chart */}
+        <div className="bg-[#1e293b] rounded-xl p-6 border border-slate-700/50 lg:col-span-1 flex flex-col justify-between">
+          <h3 className="text-lg font-medium text-white mb-4">Payment Breakdown</h3>
+          
+          <div className="flex flex-col items-center justify-center py-4">
+            <div className="relative w-44 h-44 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <path
+                  className="text-amber-500"
+                  strokeWidth="3.8"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  className="text-emerald-500 transition-all duration-700 ease-out"
+                  strokeDasharray={`${paidPercentage}, 100`}
+                  strokeWidth="3.8"
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+              </svg>
               
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white">{(totalRecovered + totalOutstanding).toLocaleString()}</div>
-                <div className="text-xs text-slate-400">Total Volume</div>
+              <div className="absolute text-center">
+                <div className="text-xl font-bold text-white">₹{totalVolume.toLocaleString()}</div>
+                <div className="text-[11px] text-slate-400 font-medium">Total Volume</div>
               </div>
             </div>
-            <div className="flex items-center gap-4 mt-8">
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <div className="w-3 h-3 rounded bg-[#3b82f6]"></div>
-                Stripe
+
+            <div className="grid grid-cols-2 gap-4 w-full mt-6 pt-4 border-t border-slate-700/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 shrink-0"></div>
+                <div>
+                  <div className="text-[11px] text-slate-400 uppercase font-mono">Paid</div>
+                  <div className="text-sm font-bold text-emerald-400">₹{totalRecovered.toLocaleString()}</div>
+                  <div className="text-[10px] text-slate-500">{paidPercentage}% of total</div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <div className="w-3 h-3 rounded bg-[#10b981]"></div>
-                Bank Transfer
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <div className="w-3 h-3 rounded bg-[#f59e0b]"></div>
-                PayPal
+
+              <div className="flex items-center gap-2.5">
+                <div className="w-3 h-3 rounded-full bg-amber-500 shrink-0"></div>
+                <div>
+                  <div className="text-[11px] text-slate-400 uppercase font-mono">Unpaid</div>
+                  <div className="text-sm font-bold text-amber-400">₹{totalOutstanding.toLocaleString()}</div>
+                  <div className="text-[10px] text-slate-500">{unpaidPercentage}% of total</div>
+                </div>
               </div>
             </div>
           </div>
