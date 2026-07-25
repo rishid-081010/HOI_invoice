@@ -10,6 +10,7 @@ import { InvoiceDetailModal } from './components/InvoiceDetailModal';
 import { NewInvoiceModal } from './components/NewInvoiceModal';
 import { N8nSettingsModal } from './components/N8nSettingsModal';
 import { PaymentPortalModal } from './components/PaymentPortalModal';
+import { PublicPaymentPage } from './components/PublicPaymentPage';
 
 import type { Invoice, ActivityLog, N8nSettings } from './types';
 import { INITIAL_INVOICES, INITIAL_N8N_SETTINGS } from './data/mockInvoices';
@@ -317,6 +318,10 @@ export function App() {
     if (activeTab === 'escalated') return inv.status === 'escalated_to_team';
     return true;
   });
+
+  if (window.location.pathname === '/payment') {
+    return <PublicPaymentPage />;
+  }
 
   return (
     <div className="flex h-screen bg-[#080c14] text-slate-100 font-sans selection:bg-blue-500 selection:text-white overflow-hidden">
