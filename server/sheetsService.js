@@ -151,6 +151,7 @@ export function parseCSV(csvText) {
 
     const invoiceId = getField(['Invoice ID', 'invoiceId', 'id']);
     const clientName = getField(['Client Name', 'clientName', 'name']);
+    const contactPerson = getField(['Associated Person', 'contactPerson', 'Contact Person', 'Person Name']);
     const clientEmail = getField(['Client Email', 'clientEmail', 'email']);
     const rawAmount = getField(['Amount', 'amount']);
     const dueDate = getField(['Due Date', 'dueDate', 'date']);
@@ -163,6 +164,7 @@ export function parseCSV(csvText) {
     return {
       invoiceId,
       clientName,
+      contactPerson,
       clientEmail,
       amount: amountVal,
       dueDate,
