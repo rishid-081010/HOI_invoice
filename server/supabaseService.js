@@ -38,23 +38,46 @@ export async function fetchInvoices() {
 
 /**
  * Updates an invoice's stage and status in Supabase
- * @param {string} id - The internal UUID of the invoice record
+ * @param {string} identifier - The internal UUID or human invoice_id
  * @param {Object} updates - { stage: 'first reminder', status: 'reminded_friendly' }
  */
-export async function updateInvoiceStage(id, updates) {
+export async function updateInvoiceStage(identifier, updates) {
+  if (!identifier) return null;
+
   const dbUpdates = {};
   if (updates.stage !== undefined) dbUpdates.stage = updates.stage;
   if (updates.status !== undefined) dbUpdates.status = updates.status;
 
-  const { data, error } = await supabase
-    .from('invoices')
-    .update(dbUpdates)
-    .eq('id', id)
-    .select();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(identifier));
+  
+  let query = supabase.from('invoices').update(dbUpdates);
+  if (isUuid) {
+    query = query.eq('id', identifier);
+  } else {
+    query = query.eq('invoice_id', identifier);
+  }
+
+  const { data, error } = await query.select();
 
   if (error) {
-    console.error(`Error updating invoice ${id} in Supabase:`, error);
+    console.error(`Error updating invoice ${identifier} in Supabase:`, error);
     throw error;
   }
+
+  // If no rows were matched, try the secondary identifier column as a fallback
+  if (!data || data.length === 0) {
+    const fallbackCol = isUuid ? 'invoice_id' : 'id';
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('invoices')
+      .update(dbUpdates)
+      .eq(fallbackCol, identifier)
+      .select();
+
+    if (fallbackError) {
+      console.error(`Fallback update error for ${identifier}:`, fallbackError);
+    }
+    return fallbackData;
+  }
+
   return data;
 }

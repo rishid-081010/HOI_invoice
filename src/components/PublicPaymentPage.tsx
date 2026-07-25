@@ -41,7 +41,7 @@ export const PublicPaymentPage: React.FC = () => {
 
     try {
       // Hit backend API to mark as paid in Supabase
-      await payInvoiceApi(matchedInvoice.id);
+      await payInvoiceApi(matchedInvoice.id, matchedInvoice.invoiceId);
       
       setIsProcessing(false);
       setIsSuccess(true);

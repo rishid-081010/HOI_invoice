@@ -36,10 +36,12 @@ export function mapBackendInvoiceToFrontend(serverInvoice: any): Invoice {
     status = 'escalated_to_team';
   }
 
-  const id = serverInvoice.invoiceId || serverInvoice.id || `INV-${Math.floor(Math.random() * 10000)}`;
+  const id = serverInvoice.id || serverInvoice.invoiceId || `INV-${Math.floor(Math.random() * 10000)}`;
+  const invoiceId = serverInvoice.invoiceId || serverInvoice.id || id;
 
   return {
     id,
+    invoiceId,
     clientName: serverInvoice.clientName || 'Client Organization',
     clientEmail: serverInvoice.clientEmail || 'client@example.com',
     clientPhone: serverInvoice.clientPhone || '+1 (555) 019-2834',
@@ -152,12 +154,12 @@ export async function runCycleApi() {
   }
 }
 
-export async function payInvoiceApi(id: string) {
+export async function payInvoiceApi(id: string, invoiceId?: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/pay-invoice`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
+      body: JSON.stringify({ id, invoiceId })
     });
     if (!res.ok) throw new Error(`Server status ${res.status}`);
     return await res.json();

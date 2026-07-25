@@ -170,12 +170,14 @@ async function runCycle() {
  */
 app.post('/api/pay-invoice', async (req, res) => {
   try {
-    const { id } = req.body || {};
-    if (!id) return res.status(400).json({ error: 'Missing invoice id parameter' });
+    const { id, invoiceId } = req.body || {};
+    const targetId = id || invoiceId;
 
-    await updateInvoiceStage(id, { status: 'paid', stage: 'No reminder' });
-    console.log(`[server] Invoice ${id} successfully marked as PAID in Supabase.`);
-    res.json({ success: true, message: 'Invoice successfully paid and updated in Supabase.' });
+    if (!targetId) return res.status(400).json({ error: 'Missing invoice id parameter' });
+
+    const result = await updateInvoiceStage(targetId, { status: 'paid', stage: 'No reminder' });
+    console.log(`[server] Invoice ${targetId} successfully marked as PAID in Supabase. Result:`, result);
+    res.json({ success: true, message: 'Invoice successfully paid and updated in Supabase.', data: result });
   } catch (error) {
     console.error('[server] Error handling POST /api/pay-invoice:', error);
     res.status(500).json({ error: 'Failed to process payment in Supabase', message: error.message });
