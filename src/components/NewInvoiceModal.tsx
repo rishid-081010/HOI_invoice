@@ -28,7 +28,7 @@ export const NewInvoiceModal: React.FC<NewInvoiceModalProps> = ({ onClose, onAdd
       clientPhone: clientPhone || '+1 (555) 888-9900',
       contactPerson: contactPerson || 'Alex Rivera',
       amount: parseFloat(amount) || 5000,
-      currency: '$',
+      currency: '₹',
       issueDate: '2026-06-01',
       dueDate: '2026-07-01',
       daysOverdue: parseInt(daysOverdue) || 5,
@@ -101,7 +101,7 @@ export const NewInvoiceModal: React.FC<NewInvoiceModalProps> = ({ onClose, onAdd
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Amount ($)</label>
+              <label className="block text-slate-400 font-medium mb-1">Amount (₹)</label>
               <input
                 type="number"
                 required

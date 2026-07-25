@@ -61,7 +61,7 @@ export const PublicPaymentPage: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-white">Payment Successful!</h2>
           <p className="text-slate-400">
-            Thank you! Your payment for Invoice <strong className="text-white">#{matchedInvoice.invoiceId || matchedInvoice.id}</strong> ({matchedInvoice.clientName}) of <strong className="text-white">${matchedInvoice.amount.toLocaleString()}</strong> has been processed.
+            Thank you! Your payment for Invoice <strong className="text-white">#{matchedInvoice.invoiceId || matchedInvoice.id}</strong> ({matchedInvoice.clientName}) of <strong className="text-white">₹{matchedInvoice.amount.toLocaleString()}</strong> has been processed.
           </p>
           <div className="pt-2 text-xs text-emerald-400 font-medium">
             ✓ Status updated to "paid" in Supabase
@@ -145,7 +145,7 @@ export const PublicPaymentPage: React.FC = () => {
               </div>
               <div className="flex items-center justify-between pt-1">
                 <span className="text-slate-400 text-sm">Amount Due</span>
-                <span className="text-2xl font-bold text-white">${matchedInvoice.amount.toLocaleString()}</span>
+                <span className="text-2xl font-bold text-white">₹{matchedInvoice.amount.toLocaleString()}</span>
               </div>
             </div>
 
@@ -163,7 +163,7 @@ export const PublicPaymentPage: React.FC = () => {
               ) : (
                 <CreditCard className="w-5 h-5" />
               )}
-              {isProcessing ? 'Processing Secure Payment...' : `Pay $${matchedInvoice.amount.toLocaleString()} Now`}
+              {isProcessing ? 'Processing Secure Payment...' : `Pay ₹${matchedInvoice.amount.toLocaleString()} Now`}
             </button>
 
             <button

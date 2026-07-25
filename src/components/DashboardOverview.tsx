@@ -36,11 +36,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ invoices, 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-[#1e293b] rounded-xl p-5 border border-slate-700/50">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Total Outstanding</h3>
-          <div className="text-3xl font-bold text-white">${totalOutstanding.toLocaleString()}</div>
+          <div className="text-3xl font-bold text-white">₹{totalOutstanding.toLocaleString()}</div>
         </div>
         <div className="bg-[#1e293b] rounded-xl p-5 border border-slate-700/50">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">AI Recovered Revenue</h3>
-          <div className="text-3xl font-bold text-emerald-400">${totalRecovered.toLocaleString()}</div>
+          <div className="text-3xl font-bold text-emerald-400">₹{totalRecovered.toLocaleString()}</div>
         </div>
         <div className="bg-[#1e293b] rounded-xl p-5 border border-slate-700/50">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Active Reminders</h3>
@@ -141,7 +141,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ invoices, 
                     <td className="py-4 font-medium text-slate-200">{inv.clientName}</td>
                     <td className="py-4 text-slate-400">{inv.contactPerson.split(' ')[0]}</td>
                     <td className="py-4 text-amber-400">{inv.daysOverdue} days</td>
-                    <td className="py-4 text-slate-200">${inv.amount.toLocaleString()}</td>
+                    <td className="py-4 text-slate-200">₹{inv.amount.toLocaleString()}</td>
                     <td className="py-4 text-right">
                       <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                         {inv.currentStage === 0 ? 'Due for 1st Reminder' : `Stage ${inv.currentStage} Active`}

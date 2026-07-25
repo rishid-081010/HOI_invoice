@@ -165,7 +165,7 @@ export const ChannelPreview: React.FC<ChannelPreviewProps> = ({
                 rel="noreferrer"
                 className="btn-primary text-sm px-6 py-3 inline-flex"
               >
-                Pay ${invoice.amount.toLocaleString()} Now via Secure Portal 💳
+                Pay ₹{invoice.amount.toLocaleString()} Now via Secure Portal 💳
               </a>
             </div>
           </div>

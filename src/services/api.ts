@@ -45,7 +45,7 @@ export function mapBackendInvoiceToFrontend(serverInvoice: any): Invoice {
     clientPhone: serverInvoice.clientPhone || '+1 (555) 019-2834',
     contactPerson: serverInvoice.contactPerson || serverInvoice.clientName || 'Finance Manager',
     amount: typeof serverInvoice.amount === 'number' ? serverInvoice.amount : parseFloat(serverInvoice.amount) || 0,
-    currency: serverInvoice.currency || '$',
+    currency: serverInvoice.currency || '₹',
     issueDate: serverInvoice.issueDate || '01-07-2026',
     dueDate: serverInvoice.dueDate || '21-07-2026',
     daysOverdue,
