@@ -10,15 +10,23 @@
 
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { fetchInvoices } from './sheetsService.js';
 import { evaluateInvoices, evaluateInvoice } from './overdueEngine.js';
 import { triggerWebhook } from './webhookService.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve compiled static React frontend assets from dist/ folder
+app.use(express.static(path.join(__dirname, '../dist')));
 
 /**
  * Helper to fetch and evaluate current Google Sheets CRM dataset.
@@ -137,6 +145,13 @@ app.post('/api/trigger-webhook', async (req, res) => {
   } catch (error) {
     console.error('[server] Error handling POST /api/trigger-webhook:', error);
     res.status(500).json({ error: 'Failed to trigger webhook', message: error.message });
+  }
+});
+
+// Fallback to index.html for SPA frontend routing
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
   }
 });
 
