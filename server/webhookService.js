@@ -32,13 +32,31 @@ export async function triggerWebhook(evaluatedInvoice) {
   };
 
   try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
+    let response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     });
+
+    // Fallback to webhook-test URL if production URL is inactive or returns 404
+    if (!response.ok && N8N_WEBHOOK_URL.includes('/webhook/')) {
+      const testUrl = N8N_WEBHOOK_URL.replace('/webhook/', '/webhook-test/');
+      console.log(`[webhookService] Production URL returned ${response.status}. Retrying via test URL: ${testUrl}`);
+      try {
+        const testRes = await fetch(testUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (testRes.ok) {
+          response = testRes;
+        }
+      } catch (err) {
+        console.warn('[webhookService] Test URL fallback failed:', err.message);
+      }
+    }
 
     if (!response.ok) {
       console.warn(`[webhookService] n8n Webhook HTTP ${response.status}`);
