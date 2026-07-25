@@ -22,13 +22,25 @@ export async function triggerWebhook(evaluatedInvoice) {
   const dueDate = evaluatedInvoice.dueDate || '';
   const paymentLink = evaluatedInvoice.paymentLink || '';
   const clientEmail = evaluatedInvoice.clientEmail || '';
+  const stage = evaluatedInvoice.stage || 1;
+
+  let subject = "Reminder about your unpaid invoice";
+  let body = `Hey ${personName}, your Invoice ID is ${invoiceNum}. You have an unpaid invoice of ${amount} that was due on ${dueDate}. Kindly pay via ${paymentLink}. Thank you`;
+
+  if (stage === 2) {
+    subject = "URGENT: Second Reminder for Unpaid Invoice";
+    body = `Hey ${personName}, your Invoice ID is ${invoiceNum}. Your payment of ${amount} was due on ${dueDate} and is now overdue. Please process this payment ASAP to keep your account in good standing. Pay here: ${paymentLink}. Thank you`;
+  } else if (stage >= 3) {
+    subject = "FINAL NOTICE: Overdue Invoice - Service Cancellation Warning";
+    body = `Hey ${personName}, your Invoice ID is ${invoiceNum}. Your invoice of ${amount} was due on ${dueDate} and remains severely overdue. Please be advised that immediate payment is required to avoid cancellation of service. Kindly settle immediately via ${paymentLink}. Thank you`;
+  }
 
   const payload = {
     id: uuid,
     invoiceId: invoiceNum,
     to: clientEmail,
-    subject: "Reminder about your unpaid invoice",
-    body: `Hey ${personName}, your Invoice ID is ${invoiceNum}. You have an unpaid invoice of ${amount} that was due on ${dueDate}. Kindly pay via ${paymentLink}. Thank you`
+    subject: subject,
+    body: body
   };
 
   try {
