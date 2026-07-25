@@ -170,10 +170,10 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                             <div className="font-bold text-xs text-white group-hover:text-cyan-400 transition-colors">
                               {inv.clientName}
                             </div>
-                            <span className="text-[10px] font-mono text-slate-400">#{inv.id}</span>
+                            <span className="text-[10px] font-mono text-slate-400">#{inv.invoiceId || inv.id}</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
-                            <span>{inv.issueDate.substring(5)}</span>
+                            <span>{inv.issueDate ? inv.issueDate.substring(5) : ''}</span>
                             <button 
                               onClick={(e) => { e.stopPropagation(); }}
                               className="text-slate-600 hover:text-rose-400 transition-colors p-0.5"
@@ -256,7 +256,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                     className="hover:bg-slate-900/50 cursor-pointer transition-colors"
                   >
                     <td className="px-6 py-4 font-bold text-white">
-                      {inv.clientName} <span className="font-mono text-cyan-400 text-xs">({inv.id})</span>
+                      {inv.clientName} <span className="font-mono text-cyan-400 text-xs">(#{inv.invoiceId || inv.id})</span>
                     </td>
                     <td className="px-6 py-4 font-bold text-emerald-400">{inv.currency}{inv.amount.toLocaleString()}</td>
                     <td className="px-6 py-4 text-amber-400 font-semibold">{inv.daysOverdue} days</td>

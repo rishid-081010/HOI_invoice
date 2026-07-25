@@ -14,7 +14,7 @@ import { PublicPaymentPage } from './components/PublicPaymentPage';
 
 import type { Invoice, ActivityLog, N8nSettings } from './types';
 import { INITIAL_INVOICES, INITIAL_N8N_SETTINGS } from './data/mockInvoices';
-import { fetchInvoices, triggerWebhookApi, runCycleApi } from './services/api';
+import { fetchInvoices, triggerWebhookApi, runCycleApi, payInvoiceApi } from './services/api';
 
 export function App() {
   const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
@@ -127,35 +127,37 @@ export function App() {
     }
   };
 
-  // Simulate Payment Recovery
-  const handleSimulatePayment = (inv: Invoice) => {
-    setInvoices(prev => prev.map(item => {
-      if (item.id === inv.id) {
-        return {
-          ...item,
-          status: 'paid',
-          daysOverdue: 0
-        };
+  // Payment Recovery (Marks as paid in Supabase DB)
+  const handleSimulatePayment = async (inv: Invoice) => {
+    try {
+      // Persist paid status in Supabase database
+      await payInvoiceApi(inv.id, inv.invoiceId);
+
+      // Refetch latest invoices state from Supabase
+      const refreshedInvoices = await fetchInvoices();
+      if (refreshedInvoices) {
+        setInvoices(refreshedInvoices);
       }
-      return item;
-    }));
 
-    confetti({
-      particleCount: 120,
-      spread: 80,
-      origin: { y: 0.6 }
-    });
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
 
-    addLog(
-      inv.id,
-      inv.clientName,
-      'payment_received',
-      `💳 PAYMENT RECEIVED: ${inv.currency}${inv.amount.toLocaleString()} paid in full! Ledger updated & AI sequence closed.`,
-      'emerald'
-    );
+      addLog(
+        inv.id,
+        inv.clientName,
+        'payment_received',
+        `💳 PAYMENT RECEIVED: ${inv.currency}${inv.amount.toLocaleString()} paid in full! Supabase status updated to paid.`,
+        'emerald'
+      );
 
-    if (selectedInvoice && selectedInvoice.id === inv.id) {
-      setSelectedInvoice(null);
+      if (selectedInvoice && selectedInvoice.id === inv.id) {
+        setSelectedInvoice(null);
+      }
+    } catch (err) {
+      console.error('Error persisting payment to Supabase:', err);
     }
   };
 
