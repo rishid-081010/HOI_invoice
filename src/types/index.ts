@@ -30,6 +30,7 @@ export interface FollowUpEvent {
 
 export interface Invoice {
   id: string;
+  invoiceId?: string;
   clientName: string;
   clientEmail: string;
   clientPhone: string;

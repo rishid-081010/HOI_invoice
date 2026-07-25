@@ -14,7 +14,6 @@ import { PublicPaymentPage } from './components/PublicPaymentPage';
 
 import type { Invoice, ActivityLog, N8nSettings } from './types';
 import { INITIAL_INVOICES, INITIAL_N8N_SETTINGS } from './data/mockInvoices';
-import { generateAIMessages } from './services/aiGenerator';
 import { fetchInvoices, triggerWebhookApi, runCycleApi } from './services/api';
 
 export function App() {
