@@ -8,25 +8,29 @@ interface DashboardOverviewProps {
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ invoices, logs }) => {
+  const isPaid = (status?: string) => (status || '').toLowerCase() === 'paid';
+
+  // Total Outstanding = Sum of unpaid invoices ONLY
   const totalOutstanding = invoices
-    .filter(i => i.status !== 'paid')
+    .filter(i => !isPaid(i.status))
     .reduce((sum, i) => sum + i.amount, 0);
 
+  // AI Recovered Revenue = Sum of paid invoices ONLY
   const totalRecovered = invoices
-    .filter(i => i.status === 'paid')
+    .filter(i => isPaid(i.status))
     .reduce((sum, i) => sum + i.amount, 0);
 
-  const activeReminders = invoices.filter(i => (i.currentStage === 1 || i.currentStage === 2 || i.currentStage === 3) && i.status !== 'paid').length;
-  const escalations = invoices.filter(i => (i.currentStage >= 3 || i.status === 'escalated_to_team') && i.status !== 'paid').length;
+  const activeReminders = invoices.filter(i => !isPaid(i.status) && (i.currentStage === 1 || i.currentStage === 2 || i.currentStage === 3)).length;
+  const escalations = invoices.filter(i => !isPaid(i.status) && (i.currentStage >= 3 || i.status === 'escalated_to_team')).length;
 
-  const unpaidCount = invoices.filter(i => i.status === 'unpaid' && i.currentStage === 0).length;
-  const stage1Count = invoices.filter(i => i.currentStage === 1 && i.status !== 'paid').length;
-  const stage2Count = invoices.filter(i => i.currentStage === 2 && i.status !== 'paid').length;
-  const paidCount = invoices.filter(i => i.status === 'paid').length;
+  const unpaidCount = invoices.filter(i => !isPaid(i.status) && i.currentStage === 0).length;
+  const stage1Count = invoices.filter(i => !isPaid(i.status) && i.currentStage === 1).length;
+  const stage2Count = invoices.filter(i => !isPaid(i.status) && i.currentStage === 2).length;
+  const paidCount = invoices.filter(i => isPaid(i.status)).length;
 
   // Upcoming follow-ups for the table
   const upcomingFollowUps = invoices
-    .filter(i => i.status !== 'paid' && i.status !== 'escalated_to_team')
+    .filter(i => !isPaid(i.status) && i.status !== 'escalated_to_team')
     .sort((a, b) => b.daysOverdue - a.daysOverdue)
     .slice(0, 5);
 
