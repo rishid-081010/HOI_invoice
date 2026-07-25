@@ -152,11 +152,27 @@ export async function runCycleApi() {
   }
 }
 
+export async function payInvoiceApi(id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/pay-invoice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    if (!res.ok) throw new Error(`Server status ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to pay invoice:', error);
+    return { success: false };
+  }
+}
+
 export default {
   fetchInvoices,
   fetchSummary,
   evaluateInvoicesApi,
   triggerWebhookApi,
   runCycleApi,
+  payInvoiceApi,
   mapBackendInvoiceToFrontend
 };

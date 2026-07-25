@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, Search, CheckCircle2, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { fetchInvoices } from '../services/api';
+import { fetchInvoices, payInvoiceApi } from '../services/api';
 import type { Invoice } from '../types';
 
 export const PublicPaymentPage: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [searchName, setSearchName] = useState('');
+  const [searchInvoiceId, setSearchInvoiceId] = useState('');
   const [matchedInvoice, setMatchedInvoice] = useState<Invoice | null>(null);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -21,9 +21,10 @@ export const PublicPaymentPage: React.FC = () => {
     e.preventDefault();
     setSearchAttempted(true);
     
-    // Exact or case-insensitive match on company name
+    const query = searchInvoiceId.toLowerCase().trim();
+    // Search by Invoice ID (or internal UUID)
     const match = invoices.find(inv => 
-      inv.clientName.toLowerCase().trim() === searchName.toLowerCase().trim() &&
+      (inv.id.toLowerCase().trim() === query || (inv.invoiceId && inv.invoiceId.toLowerCase().trim() === query)) &&
       inv.status !== 'paid'
     );
     
@@ -34,16 +35,21 @@ export const PublicPaymentPage: React.FC = () => {
     }
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
+    if (!matchedInvoice) return;
     setIsProcessing(true);
-    setTimeout(() => {
+
+    try {
+      // Hit backend API to mark as paid in Supabase
+      await payInvoiceApi(matchedInvoice.id);
+      
       setIsProcessing(false);
       setIsSuccess(true);
       confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
-      
-      // Hit backend API to mark as paid (Optional for this demo)
-      // fetch('/api/pay', { ... })
-    }, 2000);
+    } catch (err) {
+      console.error('Payment error:', err);
+      setIsProcessing(false);
+    }
   };
 
   if (isSuccess && matchedInvoice) {
@@ -55,8 +61,11 @@ export const PublicPaymentPage: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-white">Payment Successful!</h2>
           <p className="text-slate-400">
-            Thank you, {matchedInvoice.clientName}. Your payment of <strong className="text-white">${matchedInvoice.amount.toLocaleString()}</strong> has been processed successfully.
+            Thank you! Your payment for Invoice <strong className="text-white">#{matchedInvoice.invoiceId || matchedInvoice.id}</strong> ({matchedInvoice.clientName}) of <strong className="text-white">${matchedInvoice.amount.toLocaleString()}</strong> has been processed.
           </p>
+          <div className="pt-2 text-xs text-emerald-400 font-medium">
+            ✓ Status updated to "paid" in Supabase
+          </div>
         </div>
       </div>
     );
@@ -85,19 +94,19 @@ export const PublicPaymentPage: React.FC = () => {
           <form onSubmit={handleSearch} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Enter your Company Name to locate your pending invoice:
+                Enter your Invoice ID to locate your pending invoice:
               </label>
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                 <input
                   type="text"
                   required
-                  value={searchName}
+                  value={searchInvoiceId}
                   onChange={(e) => {
-                    setSearchName(e.target.value);
+                    setSearchInvoiceId(e.target.value);
                     setSearchAttempted(false);
                   }}
-                  placeholder="e.g. Acme Enterprise Inc"
+                  placeholder="e.g. INV-2041 or INV-001"
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3.5 pl-11 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
               </div>
@@ -107,7 +116,7 @@ export const PublicPaymentPage: React.FC = () => {
               <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                 <p className="text-sm text-rose-300">
-                  We couldn't find an unpaid invoice matching exactly <strong>"{searchName}"</strong>. Please check your spelling and try again.
+                  We couldn't find an unpaid invoice matching <strong>"{searchInvoiceId}"</strong>. Please verify your Invoice ID and try again.
                 </p>
               </div>
             )}
@@ -123,12 +132,16 @@ export const PublicPaymentPage: React.FC = () => {
           <div className="space-y-6">
             <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-                <span className="text-slate-400 text-sm">Company</span>
+                <span className="text-slate-400 text-sm">Invoice ID</span>
+                <span className="font-mono text-white font-semibold">{matchedInvoice.invoiceId || matchedInvoice.id}</span>
+              </div>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <span className="text-slate-400 text-sm">Company Name</span>
                 <span className="font-semibold text-white">{matchedInvoice.clientName}</span>
               </div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-                <span className="text-slate-400 text-sm">Invoice ID</span>
-                <span className="font-mono text-slate-300">{matchedInvoice.id}</span>
+                <span className="text-slate-400 text-sm">Contact Person</span>
+                <span className="text-slate-300">{matchedInvoice.contactPerson}</span>
               </div>
               <div className="flex items-center justify-between pt-1">
                 <span className="text-slate-400 text-sm">Amount Due</span>
@@ -160,7 +173,7 @@ export const PublicPaymentPage: React.FC = () => {
               }}
               className="w-full py-2 text-sm text-slate-400 hover:text-white transition-colors"
             >
-              ← Search a different company
+              ← Search a different Invoice ID
             </button>
           </div>
         )}

@@ -164,13 +164,21 @@ async function runCycle() {
  * POST /api/run-cycle
  * Manually trigger the full cycle from the dashboard.
  */
-app.post('/api/run-cycle', async (req, res) => {
+/**
+ * POST /api/pay-invoice
+ * Marks an invoice as paid in Supabase.
+ */
+app.post('/api/pay-invoice', async (req, res) => {
   try {
-    const result = await runCycle();
-    res.json({ success: true, ...result });
+    const { id } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'Missing invoice id parameter' });
+
+    await updateInvoiceStage(id, { status: 'paid', stage: 'No reminder' });
+    console.log(`[server] Invoice ${id} successfully marked as PAID in Supabase.`);
+    res.json({ success: true, message: 'Invoice successfully paid and updated in Supabase.' });
   } catch (error) {
-    console.error('[server] Error handling POST /api/run-cycle:', error);
-    res.status(500).json({ error: 'Failed to run cycle', message: error.message });
+    console.error('[server] Error handling POST /api/pay-invoice:', error);
+    res.status(500).json({ error: 'Failed to process payment in Supabase', message: error.message });
   }
 });
 
