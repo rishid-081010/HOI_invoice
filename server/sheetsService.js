@@ -149,7 +149,7 @@ export function parseCSV(csvText) {
       return '';
     };
 
-    const invoiceId = getField(['Invoice ID', 'invoiceId', 'id']);
+    let invoiceId = getField(['Invoice ID', 'invoiceId', 'id']);
     const clientName = getField(['Client Name', 'clientName', 'name']);
     const contactPerson = getField(['Associated Person', 'contactPerson', 'Contact Person', 'Person Name']);
     const clientEmail = getField(['Client Email', 'clientEmail', 'email']);
@@ -160,6 +160,10 @@ export function parseCSV(csvText) {
     const notes = getField(['Notes', 'notes']);
 
     const amountVal = parseFloat((rawAmount || '0').replace(/[^0-9.-]+/g, '')) || 0;
+
+    if (!invoiceId && clientName) {
+      invoiceId = 'INV-' + clientName.replace(/[^A-Za-z0-9]/g, '').substring(0, 5).toUpperCase() + '-' + amountVal;
+    }
 
     return {
       invoiceId,
@@ -172,7 +176,7 @@ export function parseCSV(csvText) {
       paymentLink,
       notes
     };
-  }).filter(item => Boolean(item.invoiceId));
+  }).filter(item => Boolean(item.clientName));
 }
 
 /**
