@@ -94,27 +94,36 @@ export function App() {
     setLogs(prev => [newLog, ...prev]);
   };
 
+  const [isRunningCycle, setIsRunningCycle] = useState(false);
+
   // Run AI Collections Cycle
   const handleRunAICycle = async () => {
-    // 1. Hit the backend manual trigger
-    const cycleResult = await runCycleApi();
-    
-    if (cycleResult.success) {
-      addLog(
-        'SYSTEM',
-        'Automated Cycle',
-        'ai_generation',
-        `Evaluated ${cycleResult.evaluated} invoices. Fired ${cycleResult.triggersFired} new webhooks. Database synchronized.`,
-        'cyan'
-      );
-    } else {
-      addLog('SYSTEM', 'Automated Cycle', 'slack_escalation', 'Failed to run backend automated cycle.', 'rose');
-    }
+    setIsRunningCycle(true);
+    try {
+      // 1. Hit the backend manual trigger
+      const cycleResult = await runCycleApi();
+      
+      if (cycleResult && cycleResult.success) {
+        addLog(
+          'SYSTEM',
+          'Automated Cycle',
+          'ai_generation',
+          `Evaluated ${cycleResult.evaluated} invoices. Fired ${cycleResult.triggersFired} new webhooks. Database synchronized.`,
+          'cyan'
+        );
+      } else {
+        addLog('SYSTEM', 'Automated Cycle', 'slack_escalation', 'Failed to run backend automated cycle.', 'rose');
+      }
 
-    // 2. Fetch the newly updated database state
-    const refreshedInvoices = await fetchInvoices();
-    if (refreshedInvoices) {
-      setInvoices(refreshedInvoices);
+      // 2. Fetch the newly updated database state
+      const refreshedInvoices = await fetchInvoices();
+      if (refreshedInvoices) {
+        setInvoices(refreshedInvoices);
+      }
+    } catch (err) {
+      console.error('Error running cycle:', err);
+    } finally {
+      setIsRunningCycle(false);
     }
   };
 
@@ -275,6 +284,7 @@ export function App() {
         <Header 
           title={getHeaderTitle()} 
           onRunAICycle={handleRunAICycle}
+          isRunningCycle={isRunningCycle}
           onOpenPaymentPortal={() => {
             setPaymentPortalInvoice(null);
             setIsPaymentPortalOpen(true);

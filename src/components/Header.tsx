@@ -5,12 +5,14 @@ interface HeaderProps {
   title: string;
   onRunAICycle: () => void;
   onOpenPaymentPortal: () => void;
+  isRunningCycle?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title,
   onRunAICycle,
-  onOpenPaymentPortal
+  onOpenPaymentPortal,
+  isRunningCycle = false
 }) => {
   return (
     <header className="h-20 border-b border-slate-800 bg-[#0f172a] flex items-center justify-between px-8 shrink-0">
@@ -34,10 +36,15 @@ export const Header: React.FC<HeaderProps> = ({
 
         <button 
           onClick={onRunAICycle}
-          className="flex items-center gap-2 px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors text-sm font-medium"
+          disabled={isRunningCycle}
+          className={`flex items-center gap-2 px-4 py-2 rounded border border-slate-700 transition-colors text-sm font-medium ${
+            isRunningCycle 
+              ? 'bg-blue-900/50 text-blue-300 cursor-not-allowed border-blue-500/50' 
+              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 active:scale-[0.98]'
+          }`}
         >
-          <RefreshCw className="w-4 h-4 text-slate-400" />
-          Run AI Cycle
+          <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRunningCycle ? 'animate-spin' : ''}`} />
+          {isRunningCycle ? 'Scanning Supabase...' : 'Run AI Cycle'}
         </button>
       </div>
     </header>

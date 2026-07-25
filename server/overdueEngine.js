@@ -16,20 +16,39 @@
  */
 export function parseDDMMYYYY(dateStr) {
   if (!dateStr || typeof dateStr !== 'string') return null;
+  const str = dateStr.trim();
 
-  const match = dateStr.trim().match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-  if (!match) return null;
-
-  const day = parseInt(match[1], 10);
-  const month = parseInt(match[2], 10) - 1; // 0-indexed month
-  const year = parseInt(match[3], 10);
-
-  const date = new Date(year, month, day, 0, 0, 0, 0);
-  
-  // Validate date correctness (e.g. prevent 31-02-2026)
-  if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
-    return date;
+  // Try DD-MM-YYYY or DD/MM/YYYY
+  const matchDDMM = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (matchDDMM) {
+    const day = parseInt(matchDDMM[1], 10);
+    const month = parseInt(matchDDMM[2], 10) - 1;
+    const year = parseInt(matchDDMM[3], 10);
+    const date = new Date(year, month, day, 0, 0, 0, 0);
+    if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+      return date;
+    }
   }
+
+  // Try YYYY-MM-DD or YYYY/MM/DD
+  const matchYYYYMM = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (matchYYYYMM) {
+    const year = parseInt(matchYYYYMM[1], 10);
+    const month = parseInt(matchYYYYMM[2], 10) - 1;
+    const day = parseInt(matchYYYYMM[3], 10);
+    const date = new Date(year, month, day, 0, 0, 0, 0);
+    if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+      return date;
+    }
+  }
+
+  // Fallback for standard ISO strings
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    parsed.setHours(0, 0, 0, 0);
+    return parsed;
+  }
+
   return null;
 }
 
