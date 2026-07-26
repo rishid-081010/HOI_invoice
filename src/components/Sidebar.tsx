@@ -24,7 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpe
       {/* Logo Area */}
       <div className="h-16 flex items-center px-6 border-b border-slate-800">
         <h1 className="text-xl font-bold text-slate-100 tracking-wide">
-          CollectAI
+          Invoice Recovery
         </h1>
       </div>
 
