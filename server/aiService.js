@@ -13,7 +13,7 @@ export function setGeminiApiKey(key) {
 }
 
 export function getGeminiApiKey() {
-  return currentGeminiKey;
+  return currentGeminiKey || process.env.GCP_CREDENTIALS_JSON || '';
 }
 
 /**
