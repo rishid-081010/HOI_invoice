@@ -84,63 +84,66 @@ Respond strictly in valid JSON format with keys "subject" and "body". Example:
       }
     }
 
-    // 1b. Try Vertex AI using GCP Credentials JSON
+    // 1b. Try GCP Service Account Credentials via OAuth2 Bearer Token
     try {
-      console.log(`[aiService] Calling Vertex AI Gemini for Invoice #${invoiceNum}...`);
+      console.log(`[aiService] Calling Gemini API via GCP Service Account for Invoice #${invoiceNum}...`);
       
       const fs = await import('fs');
-      const path = await import('path');
-      const { fileURLToPath } = await import('url');
+      let creds = null;
 
-      // Try 1: Environment Variable GCP_CREDENTIALS_JSON (recommended for Render cloud deployment)
+      // Check process.env.GCP_CREDENTIALS_JSON
       if (process.env.GCP_CREDENTIALS_JSON) {
         try {
-          creds = JSON.parse(process.env.GCP_CREDENTIALS_JSON);
+          creds = typeof process.env.GCP_CREDENTIALS_JSON === 'string' 
+            ? JSON.parse(process.env.GCP_CREDENTIALS_JSON) 
+            : process.env.GCP_CREDENTIALS_JSON;
         } catch (e) {}
       }
 
-      // Try 2: Local Windows path fallback
+      // Check local file fallback
       if (!creds) {
         try {
-          gcpKeyPath = 'C:\\Users\\Rishi D\\OneDrive\\Desktop\\Hustle\\GCP Credentials.json';
-          if (fs.existsSync(gcpKeyPath)) {
-            creds = JSON.parse(fs.readFileSync(gcpKeyPath, 'utf8'));
+          const localPath = 'C:\\Users\\Rishi D\\OneDrive\\Desktop\\Hustle\\GCP Credentials.json';
+          if (fs.existsSync(localPath)) {
+            creds = JSON.parse(fs.readFileSync(localPath, 'utf8'));
           }
         } catch (e) {}
       }
 
-      if (gcpKeyPath) {
-        process.env.GOOGLE_APPLICATION_CREDENTIALS = gcpKeyPath;
-      }
+      if (creds && creds.client_email && creds.private_key) {
+        const token = await getGcpAccessToken(creds);
+        if (token) {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+              generationConfig: {
+                responseMimeType: 'application/json'
+              }
+            })
+          });
 
-      const projectId = creds?.project_id || '';
-
-      if (projectId) {
-        const { VertexAI } = await import('@google-cloud/vertexai');
-        const vertex_ai = new VertexAI({ project: projectId, location: 'us-central1' });
-        
-        const generativeModel = vertex_ai.preview.getGenerativeModel({
-          model: 'gemini-1.5-flash',
-          generationConfig: {
-            responseMimeType: 'application/json'
-          }
-        });
-
-        const response = await generativeModel.generateContent({
-          contents: [{ role: 'user', parts: [{ text: promptText }] }]
-        });
-
-        if (response && response.response) {
-          const text = response.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          const parsed = parseAIJsonResponse(text, invoiceNum, personName, amount, dueDate, paymentLink, stage);
-          if (parsed) {
-            console.log(`[aiService] Vertex AI successfully generated email for Invoice #${invoiceNum}`);
-            return { ...parsed, providerUsed: 'gemini' };
+          if (response.ok) {
+            const data = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const parsed = parseAIJsonResponse(text, invoiceNum, personName, amount, dueDate, paymentLink, stage);
+            if (parsed) {
+              console.log(`[aiService] Gemini API (via Service Account OAuth2) successfully generated email for Invoice #${invoiceNum}`);
+              return { ...parsed, providerUsed: 'gemini' };
+            }
+          } else {
+            const errText = await response.text();
+            console.warn(`[aiService] Gemini API via Service Account returned HTTP ${response.status}:`, errText.substring(0, 200));
           }
         }
       }
     } catch (err) {
-      console.warn('[aiService] Vertex AI error:', err.message);
+      console.warn('[aiService] GCP Service Account OAuth2 error:', err.message);
     }
   }
 
@@ -230,4 +233,52 @@ function getTemplateMessage(invoiceNum, personName, amount, dueDate, paymentLink
   }
 
   return { subject, body, providerUsed: 'template' };
+}
+
+async function getGcpAccessToken(cred) {
+  try {
+    const crypto = await import('crypto');
+    const now = Math.floor(Date.now() / 1000);
+    const header = { alg: 'RS256', typ: 'JWT' };
+    const claimSet = {
+      iss: cred.client_email,
+      scope: 'https://www.googleapis.com/auth/generative-language https://www.googleapis.com/auth/cloud-platform',
+      aud: cred.token_uri || 'https://oauth2.googleapis.com/token',
+      exp: now + 3600,
+      iat: now
+    };
+
+    const base64Url = (str) =>
+      Buffer.from(typeof str === 'string' ? str : JSON.stringify(str))
+        .toString('base64')
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+
+    const unsignedToken = `${base64Url(header)}.${base64Url(claimSet)}`;
+    const signer = crypto.createSign('RSA-SHA256');
+    signer.update(unsignedToken);
+    const signature = signer.sign(cred.private_key, 'base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+
+    const jwt = `${unsignedToken}.${signature}`;
+
+    const response = await fetch(cred.token_uri || 'https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt
+      })
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.access_token || null;
+  } catch (err) {
+    console.warn('[aiService] Token generation error:', err.message);
+    return null;
+  }
 }
