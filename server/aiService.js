@@ -63,7 +63,10 @@ Respond strictly in valid JSON format with keys "subject" and "body". Example:
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }]
+            contents: [{ parts: [{ text: promptText }] }],
+            generationConfig: {
+              responseMimeType: 'application/json'
+            }
           })
         });
 
@@ -103,6 +106,9 @@ Respond strictly in valid JSON format with keys "subject" and "body". Example:
         
         const generativeModel = vertex_ai.preview.getGenerativeModel({
           model: 'gemini-1.5-flash',
+          generationConfig: {
+            responseMimeType: 'application/json'
+          }
         });
 
         const response = await generativeModel.generateContent({
