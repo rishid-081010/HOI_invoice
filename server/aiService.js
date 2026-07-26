@@ -88,17 +88,32 @@ Respond strictly in valid JSON format with keys "subject" and "body". Example:
     try {
       console.log(`[aiService] Calling Vertex AI Gemini for Invoice #${invoiceNum}...`);
       
-      const gcpKeyPath = 'C:\\Users\\Rishi D\\OneDrive\\Desktop\\Hustle\\GCP Credentials.json';
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = gcpKeyPath;
-      
-      let projectId = '';
-      try {
-        const fs = await import('fs');
-        const creds = JSON.parse(fs.readFileSync(gcpKeyPath, 'utf8'));
-        projectId = creds.project_id;
-      } catch (e) {
-        console.warn('[aiService] Failed to read GCP credentials file:', e.message);
+      const fs = await import('fs');
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+
+      // Try 1: Environment Variable GCP_CREDENTIALS_JSON (recommended for Render cloud deployment)
+      if (process.env.GCP_CREDENTIALS_JSON) {
+        try {
+          creds = JSON.parse(process.env.GCP_CREDENTIALS_JSON);
+        } catch (e) {}
       }
+
+      // Try 2: Local Windows path fallback
+      if (!creds) {
+        try {
+          gcpKeyPath = 'C:\\Users\\Rishi D\\OneDrive\\Desktop\\Hustle\\GCP Credentials.json';
+          if (fs.existsSync(gcpKeyPath)) {
+            creds = JSON.parse(fs.readFileSync(gcpKeyPath, 'utf8'));
+          }
+        } catch (e) {}
+      }
+
+      if (gcpKeyPath) {
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = gcpKeyPath;
+      }
+
+      const projectId = creds?.project_id || '';
 
       if (projectId) {
         const { VertexAI } = await import('@google-cloud/vertexai');
