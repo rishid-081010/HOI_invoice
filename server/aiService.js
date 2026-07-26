@@ -52,15 +52,43 @@ Respond strictly in valid JSON format with keys "subject" and "body". Example:
   "body": "Hey ${personName}, your Invoice ID is ${invoiceNum}. You have an unpaid invoice of ₹${amount.toLocaleString()} due on ${dueDate}. Please pay via ${paymentLink}."
 }`;
 
-  // 1. Try Gemini API via Vertex AI using GCP Credentials
+  // 1. Try Gemini API (via Direct API Key or GCP Credentials)
   if (provider === 'gemini') {
+    // 1a. Try direct Gemini API Key if available
+    if (apiKey) {
+      try {
+        console.log(`[aiService] Calling Direct Gemini API Key for Invoice #${invoiceNum}...`);
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }]
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const parsed = parseAIJsonResponse(text, invoiceNum, personName, amount, dueDate, paymentLink, stage);
+          if (parsed) {
+            console.log(`[aiService] Direct Gemini API successfully generated email for Invoice #${invoiceNum}`);
+            return { ...parsed, providerUsed: 'gemini' };
+          }
+        }
+      } catch (err) {
+        console.warn('[aiService] Direct Gemini API Key error:', err.message);
+      }
+    }
+
+    // 1b. Try Vertex AI using GCP Credentials JSON
     try {
       console.log(`[aiService] Calling Vertex AI Gemini for Invoice #${invoiceNum}...`);
       
       const gcpKeyPath = 'C:\\Users\\Rishi D\\OneDrive\\Desktop\\Hustle\\GCP Credentials.json';
       process.env.GOOGLE_APPLICATION_CREDENTIALS = gcpKeyPath;
       
-      let projectId = 'your-project-id';
+      let projectId = '';
       try {
         const fs = await import('fs');
         const creds = JSON.parse(fs.readFileSync(gcpKeyPath, 'utf8'));
@@ -69,24 +97,25 @@ Respond strictly in valid JSON format with keys "subject" and "body". Example:
         console.warn('[aiService] Failed to read GCP credentials file:', e.message);
       }
 
-      const { VertexAI } = await import('@google-cloud/vertexai');
-      const vertex_ai = new VertexAI({ project: projectId, location: 'us-central1' });
-      
-      // Use gemini-1.5-flash which is widely available on Vertex
-      const generativeModel = vertex_ai.preview.getGenerativeModel({
-        model: 'gemini-1.5-flash',
-      });
+      if (projectId) {
+        const { VertexAI } = await import('@google-cloud/vertexai');
+        const vertex_ai = new VertexAI({ project: projectId, location: 'us-central1' });
+        
+        const generativeModel = vertex_ai.preview.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+        });
 
-      const response = await generativeModel.generateContent({
-        contents: [{ role: 'user', parts: [{ text: promptText }] }]
-      });
+        const response = await generativeModel.generateContent({
+          contents: [{ role: 'user', parts: [{ text: promptText }] }]
+        });
 
-      if (response && response.response) {
-        const text = response.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const parsed = parseAIJsonResponse(text, invoiceNum, personName, amount, dueDate, paymentLink, stage);
-        if (parsed) {
-          console.log(`[aiService] Vertex AI successfully generated email for Invoice #${invoiceNum}`);
-          return { ...parsed, providerUsed: 'gemini' };
+        if (response && response.response) {
+          const text = response.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const parsed = parseAIJsonResponse(text, invoiceNum, personName, amount, dueDate, paymentLink, stage);
+          if (parsed) {
+            console.log(`[aiService] Vertex AI successfully generated email for Invoice #${invoiceNum}`);
+            return { ...parsed, providerUsed: 'gemini' };
+          }
         }
       }
     } catch (err) {
