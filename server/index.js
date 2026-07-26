@@ -112,7 +112,9 @@ app.post('/api/trigger-webhook', async (req, res) => {
       return res.status(404).json({ error: 'Invoice not found', invoiceId });
     }
 
-    const webhookResult = await triggerWebhook(target);
+    // Generate AI message via Gemini before dispatching webhook
+    const aiMessage = await generateAIMessage(target, currentProvider);
+    const webhookResult = await triggerWebhook(target, aiMessage);
     res.json({
       success: true,
       invoiceId: target.invoiceId,
