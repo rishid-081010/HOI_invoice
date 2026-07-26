@@ -24,7 +24,7 @@ export function getGeminiApiKey() {
  * @returns {Promise<{ subject: string, body: string, providerUsed: string }>}
  */
 export async function generateAIMessage(invoice, provider = 'gemini', customApiKey = '') {
-  const apiKey = customApiKey || currentGeminiKey;
+  const apiKey = (customApiKey || currentGeminiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
   const invoiceNum = invoice.invoiceId || invoice.id || 'INV-000';
   const personName = invoice.contactPerson || invoice.clientName || 'Client';
   const amount = invoice.amount || 0;
