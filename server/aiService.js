@@ -52,37 +52,50 @@ Respond strictly in valid JSON format with keys "subject" and "body". Example:
   "body": "Hey ${personName}, your Invoice ID is ${invoiceNum}. You have an unpaid invoice of ₹${amount.toLocaleString()} due on ${dueDate}. Please pay via ${paymentLink}."
 }`;
 
-  // 1. Try Gemini API
-  if (provider === 'gemini' && apiKey) {
+  // 1. Try Gemini API via Vertex AI using GCP Credentials
+  if (provider === 'gemini') {
     try {
-      console.log(`[aiService] Calling Gemini API for Invoice #${invoiceNum}...`);
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }]
-        })
+      console.log(`[aiService] Calling Vertex AI Gemini for Invoice #${invoiceNum}...`);
+      
+      const gcpKeyPath = 'C:\\Users\\Rishi D\\OneDrive\\Desktop\\Hustle\\GCP Credentials.json';
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = gcpKeyPath;
+      
+      let projectId = 'your-project-id';
+      try {
+        const fs = await import('fs');
+        const creds = JSON.parse(fs.readFileSync(gcpKeyPath, 'utf8'));
+        projectId = creds.project_id;
+      } catch (e) {
+        console.warn('[aiService] Failed to read GCP credentials file:', e.message);
+      }
+
+      const { VertexAI } = await import('@google-cloud/vertexai');
+      const vertex_ai = new VertexAI({ project: projectId, location: 'us-central1' });
+      
+      // Use gemini-1.5-flash which is widely available on Vertex
+      const generativeModel = vertex_ai.preview.getGenerativeModel({
+        model: 'gemini-1.5-flash',
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const response = await generativeModel.generateContent({
+        contents: [{ role: 'user', parts: [{ text: promptText }] }]
+      });
+
+      if (response && response.response) {
+        const text = response.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const parsed = parseAIJsonResponse(text, invoiceNum, personName, amount, dueDate, paymentLink, stage);
         if (parsed) {
-          console.log(`[aiService] Gemini API successfully generated email for Invoice #${invoiceNum}`);
+          console.log(`[aiService] Vertex AI successfully generated email for Invoice #${invoiceNum}`);
           return { ...parsed, providerUsed: 'gemini' };
         }
-      } else {
-        console.warn(`[aiService] Gemini API returned status ${response.status}. Attempting fallback...`);
       }
     } catch (err) {
-      console.warn('[aiService] Gemini API error:', err.message);
+      console.warn('[aiService] Vertex AI error:', err.message);
     }
   }
 
   // 2. Try Local Ollama Fallback
-  if (provider === 'ollama' || (provider === 'gemini' && !apiKey)) {
+  if (provider === 'ollama') {
     try {
       const ollamaUrl = process.env.OLLAMA_URL || 'http://127.0.0.1:11434';
       const ollamaModel = process.env.OLLAMA_MODEL || 'llama3';
